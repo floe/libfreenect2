@@ -22,6 +22,7 @@ IF(ENABLE_CXX11)
     MESSAGE(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
   ENDIF()
 ENDIF(ENABLE_CXX11)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
 
 # additional cmake modules
 LIST(APPEND CMAKE_MODULE_PATH ${MY_DIR}/cmake_modules)

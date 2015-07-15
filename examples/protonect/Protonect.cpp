@@ -36,7 +36,32 @@
 #include <libfreenect2/registration.h>
 #include <libfreenect2/packet_pipeline.h>
 
+#include <immintrin.h>
+
 bool protonect_shutdown = false;
+
+float timing_acc = 0.0;
+float timing_acc_n = 0.0;
+float timing_current_start = 0.0;
+
+  void startTiming()
+  {
+    timing_current_start = cv::getTickCount();
+  }
+
+  void stopTiming()
+  {
+    timing_acc += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
+    timing_acc_n += 1.0;
+
+    if(timing_acc_n >= 100.0)
+    {
+      double avg = (timing_acc / timing_acc_n);
+      std::cout << "[Registration] avg. time: " << (avg * 1000) << "ms -> ~" << (1.0/avg) << "Hz" << std::endl;
+      timing_acc = 0.0;
+      timing_acc_n = 0.0;
+    }
+  }
 
 void sigint_handler(int s)
 {
@@ -124,7 +149,7 @@ int main(int argc, char *argv[])
 
   libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
   libfreenect2::FrameMap frames;
-  libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4);
+  libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), bigdepth(1920,1080+2,4);//, bigrgb(1920,1080,4);
 
   dev->setColorFrameListener(&listener);
   dev->setIrAndDepthFrameListener(&listener);
@@ -142,14 +167,48 @@ int main(int argc, char *argv[])
     libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
     libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
+    float* depth_s = ((float*)depth->data);
+    float limit = 1000.0;
+    __m256 ymm0, ymm1, ymm2, ymm3 = _mm256_broadcast_ss(&limit);
+    for (int i = 0; i < (512*424)/8; i++, depth_s+=8) {
+      ymm0 = _mm256_load_ps(depth_s);
+      ymm1 = _mm256_cmp_ps(ymm0,ymm3,_CMP_LE_OS);
+      ymm2 = _mm256_and_ps(ymm0,ymm1);
+      _mm256_store_ps(depth_s,ymm2);
+      //if (*depth_s > 1000.0) *depth_s = 0;
+    }
+
+    /*
     cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data));
     cv::imshow("ir", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
     cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
+    */
 
-    registration->apply(rgb,depth,&undistorted,&registered);
+    startTiming();
+    registration->apply(rgb,depth,&undistorted,&registered,true,&bigdepth);
 
+    /*
     cv::imshow("undistorted", cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data) / 4500.0f);
     cv::imshow("registered", cv::Mat(registered.height, registered.width, CV_8UC4, registered.data));
+    */
+
+    float* depth_p = ((float*)bigdepth.data)+1920;
+    unsigned int* rgb_src = (unsigned int*)rgb->data;
+    __m256 ymm4, ymm5 = _mm256_broadcast_ss(&limit);
+    for (int i = 0; i < (1920*1080)/8; i++, depth_p+=8, rgb_src+=8) {
+      ymm0 = _mm256_load_ps(depth_p);
+      ymm1 = _mm256_cmp_ps(ymm0,ymm5,_CMP_LE_OS);
+      ymm4 = (__m256)_mm256_load_si256((__m256i*)rgb_src);
+      ymm2 = _mm256_and_ps(ymm4,ymm1);
+      _mm256_store_si256((__m256i*)rgb_src,(__m256i)ymm2);
+    }
+    /*for (int i = 0; i < (1920*1080); i++, depth_p++, rgb_src++) {
+      if (*depth_p > 1000.0) *rgb_src = 0; // *rgb_dst = *rgb_src; else *rgb_dst = 0;
+    }*/
+    stopTiming();
+
+    //cv::imshow("bigdepth", cv::Mat(bigdepth.height, bigdepth.width, CV_32FC1, bigdepth.data) / 4500.0f);
+    cv::imshow("rgb", cv::Mat(rgb->height, rgb->width, CV_8UC4, rgb->data));
 
     int key = cv::waitKey(1);
     protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
