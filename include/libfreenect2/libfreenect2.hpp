@@ -31,6 +31,7 @@
 
 #include <libfreenect2/config.h>
 #include <libfreenect2/frame_listener.hpp>
+#include <string>
 
 namespace libfreenect2
 {
@@ -88,7 +89,8 @@ public:
 
   virtual Freenect2Device::ColorCameraParams getColorCameraParams() = 0;
   virtual Freenect2Device::IrCameraParams getIrCameraParams() = 0;
-
+  virtual void setColorCameraParams(const Freenect2Device::ColorCameraParams &params) = 0;
+  virtual void setIrCameraParams(const Freenect2Device::IrCameraParams &params) = 0;
 
   virtual void setColorFrameListener(libfreenect2::FrameListener* rgb_frame_listener) = 0;
   virtual void setIrAndDepthFrameListener(libfreenect2::FrameListener* ir_frame_listener) = 0;

@@ -131,12 +131,6 @@ SET(LIBRARIES
   gstreamer-1.0 gobject-2.0 glib-2.0 gstapp-1.0
 )
 
-SET(RESOURCES
-  data/11to16.bin
-  data/xTable.bin
-  data/zTable.bin
-)
-
 IF(ENABLE_OPENGL)
   FIND_PACKAGE(GLFW3)
   FIND_PACKAGE(OpenGL)
