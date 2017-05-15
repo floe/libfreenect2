@@ -92,6 +92,9 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 # dependencies
 FIND_PACKAGE(PkgConfig)    # try find PKGConfig as it will be used if found
 FIND_PACKAGE(LibUSB REQUIRED)
+pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.4
+                               gstreamer-video-1.0>=1.4
+                               gstreamer-app-1.0>=1.4)
 
 # Add includes
 INCLUDE_DIRECTORIES(
@@ -101,9 +104,7 @@ INCLUDE_DIRECTORIES(
   ${LIBFREENECT2_THREADING_INCLUDE_DIR}
   ${LibUSB_INCLUDE_DIRS}
   ${TurboJPEG_INCLUDE_DIRS}
-  "/usr/include/gstreamer-1.0"
-  "/usr/include/glib-2.0"
-  "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
+  ${GST_INCLUDE_DIRS}
 )
 
 SET(RESOURCES_INC_FILE "${PROJECT_BINARY_DIR}/resources.inc.h")
@@ -162,7 +163,7 @@ SET(LIBRARIES
   ${LibUSB_LIBRARIES}
   ${TurboJPEG_LIBRARIES}
   ${LIBFREENECT2_THREADING_LIBRARIES}
-  gstreamer-1.0 gobject-2.0 glib-2.0 gstapp-1.0
+  ${GST_LIBRARIES}
 )
 
 SET(LIBFREENECT2_DLLS
