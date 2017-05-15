@@ -124,9 +124,9 @@ struct ShaderProgram : public WithOpenGLBindings
 
   ShaderProgram() :
     program(0),
-    is_mesa_checked(false),
     vertex_shader(0),
-    fragment_shader(0)
+    fragment_shader(0),
+    is_mesa_checked(false)
   {
   }
 
@@ -296,8 +296,13 @@ public:
   unsigned char *data;
   size_t size;
 
-  Texture() : texture(0), data(0), size(0), bytes_per_pixel(FormatT::BytesPerPixel), height(0), width(0)
+  Texture() : bytes_per_pixel(FormatT::BytesPerPixel), height(0), width(0), texture(0), data(0), size(0)
   {
+  }
+
+  ~Texture()
+  {
+    delete[] data;
   }
 
   void bindToUnit(GLenum unit)
@@ -314,7 +319,7 @@ public:
 
     GLint max_size;
     glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE, &max_size);
-    if (new_width > max_size || new_height > max_size)
+    if (new_width > (size_t)max_size || new_height > (size_t)max_size)
     {
       LOG_ERROR << "GL_MAX_RECTANGLE_TEXTURE_SIZE is too small: " << max_size;
       exit(-1);
@@ -363,13 +368,13 @@ public:
   {
     typedef unsigned char type;
 
-    int linestep = width * bytes_per_pixel / sizeof(type);
+    size_t linestep = width * bytes_per_pixel / sizeof(type);
 
     type *first_line = reinterpret_cast<type *>(data), *last_line = reinterpret_cast<type *>(data) + (height - 1) * linestep;
 
-    for(int y = 0; y < height / 2; ++y)
+    for(size_t y = 0; y < height / 2; ++y)
     {
-      for(int x = 0; x < linestep; ++x, ++first_line, ++last_line)
+      for(size_t x = 0; x < linestep; ++x, ++first_line, ++last_line)
       {
         std::swap(*first_line, *last_line);
       }
@@ -380,6 +385,7 @@ public:
   Frame *downloadToNewFrame()
   {
     Frame *f = new Frame(width, height, bytes_per_pixel);
+    f->format = Frame::Float;
     downloadToBuffer(f->data);
     flipYBuffer(f->data);
 
@@ -431,8 +437,8 @@ public:
 
   OpenGLDepthPacketProcessorImpl(GLFWwindow *new_opengl_context_ptr, bool debug) :
     opengl_context_ptr(new_opengl_context_ptr),
-    square_vao(0),
     square_vbo(0),
+    square_vao(0),
     stage1_framebuffer(0),
     filter1_framebuffer(0),
     stage2_framebuffer(0),
@@ -863,7 +869,7 @@ OpenGLDepthPacketProcessor::OpenGLDepthPacketProcessor(void *parent_opengl_conte
   glfwDefaultWindowHints();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 #ifdef __APPLE__
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #else
@@ -949,7 +955,8 @@ void OpenGLDepthPacketProcessor::loadLookupTable(const short *lut)
 
 void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
 {
-  bool has_listener = this->listener_ != 0;
+  if (!listener_)
+    return;
   Frame *ir = 0, *depth = 0;
 
   impl_->startTiming();
@@ -958,29 +965,22 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
 
   std::copy(packet.buffer, packet.buffer + packet.buffer_length/10*9, impl_->input_data.data);
   impl_->input_data.upload();
-  impl_->run(has_listener ? &ir : 0, has_listener ? &depth : 0);
+  impl_->run(&ir, &depth);
 
   if(impl_->do_debug) glfwSwapBuffers(impl_->opengl_context_ptr);
 
   impl_->stopTiming(LOG_INFO);
 
-  if(has_listener)
-  {
-    ir->timestamp = packet.timestamp;
-    depth->timestamp = packet.timestamp;
-    ir->sequence = packet.sequence;
-    depth->sequence = packet.sequence;
+  ir->timestamp = packet.timestamp;
+  depth->timestamp = packet.timestamp;
+  ir->sequence = packet.sequence;
+  depth->sequence = packet.sequence;
 
-    if(!this->listener_->onNewFrame(Frame::Ir, ir))
-    {
-      delete ir;
-    }
+  if(!listener_->onNewFrame(Frame::Ir, ir))
+    delete ir;
 
-    if(!this->listener_->onNewFrame(Frame::Depth, depth))
-    {
-      delete depth;
-    }
-  }
+  if(!listener_->onNewFrame(Frame::Depth, depth))
+    delete depth;
 }
 
 } /* namespace libfreenect2 */

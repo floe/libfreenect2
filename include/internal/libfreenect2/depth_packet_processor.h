@@ -33,6 +33,7 @@
 #include <stdint.h>
 
 #include <libfreenect2/config.h>
+#include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/frame_listener.hpp>
 #include <libfreenect2/packet_processor.h>
 
@@ -40,34 +41,26 @@ namespace libfreenect2
 {
 
 /** Data packet with depth information. */
-struct LIBFREENECT2_API DepthPacket
+struct DepthPacket
 {
   uint32_t sequence;
   uint32_t timestamp;
   unsigned char *buffer; ///< Depth data.
   size_t buffer_length;  ///< Size of depth data.
+
+  Buffer *memory;
 };
 
 /** Class for processing depth information. */
 typedef PacketProcessor<DepthPacket> BaseDepthPacketProcessor;
 
-class LIBFREENECT2_API DepthPacketProcessor : public BaseDepthPacketProcessor
+class DepthPacketProcessor : public BaseDepthPacketProcessor
 {
 public:
-  /** Configuration of depth processing. */
-  struct LIBFREENECT2_API Config
-  {
-    float MinDepth;
-    float MaxDepth;
-
-    bool EnableBilateralFilter; ///< Whether to run the bilateral filter.
-    bool EnableEdgeAwareFilter; ///< Whether to run the edge aware filter.
-
-    Config();
-  };
+  typedef Freenect2Device::Config Config;
 
   /** Parameters of depth processing. */
-  struct LIBFREENECT2_API Parameters
+  struct Parameters
   {
     float ab_multiplier;
     float ab_multiplier_per_frq[3];
@@ -125,7 +118,7 @@ protected:
 class OpenGLDepthPacketProcessorImpl;
 
 /** Depth packet processor using OpenGL. */
-class LIBFREENECT2_API OpenGLDepthPacketProcessor : public DepthPacketProcessor
+class OpenGLDepthPacketProcessor : public DepthPacketProcessor
 {
 public:
   OpenGLDepthPacketProcessor(void *parent_opengl_context_ptr, bool debug);
@@ -137,6 +130,7 @@ public:
   virtual void loadXZTables(const float *xtable, const float *ztable);
   virtual void loadLookupTable(const short *lut);
 
+  virtual const char *name() { return "OpenGL"; }
   virtual void process(const DepthPacket &packet);
 private:
   OpenGLDepthPacketProcessorImpl *impl_;
@@ -147,7 +141,7 @@ private:
 class CpuDepthPacketProcessorImpl;
 
 /** Depth packet processor using the CPU. */
-class LIBFREENECT2_API CpuDepthPacketProcessor : public DepthPacketProcessor
+class CpuDepthPacketProcessor : public DepthPacketProcessor
 {
 public:
   CpuDepthPacketProcessor();
@@ -159,6 +153,7 @@ public:
   virtual void loadXZTables(const float *xtable, const float *ztable);
   virtual void loadLookupTable(const short *lut);
 
+  virtual const char *name() { return "CPU"; }
   virtual void process(const DepthPacket &packet);
 private:
   CpuDepthPacketProcessorImpl *impl_;
@@ -168,7 +163,7 @@ private:
 class OpenCLDepthPacketProcessorImpl;
 
 /** Depth packet processor using OpenCL. */
-class LIBFREENECT2_API OpenCLDepthPacketProcessor : public DepthPacketProcessor
+class OpenCLDepthPacketProcessor : public DepthPacketProcessor
 {
 public:
   OpenCLDepthPacketProcessor(const int deviceId = -1);
@@ -180,10 +175,70 @@ public:
   virtual void loadXZTables(const float *xtable, const float *ztable);
   virtual void loadLookupTable(const short *lut);
 
+  virtual bool good();
+  virtual const char *name() { return "OpenCL"; }
+
   virtual void process(const DepthPacket &packet);
+protected:
+  virtual Allocator *getAllocator();
 private:
   OpenCLDepthPacketProcessorImpl *impl_;
 };
 #endif // LIBFREENECT2_WITH_OPENCL_SUPPORT
+
+#ifdef LIBFREENECT2_WITH_CUDA_SUPPORT
+class CudaDepthPacketProcessorImpl;
+
+class CudaDepthPacketProcessor : public DepthPacketProcessor
+{
+public:
+  CudaDepthPacketProcessor(const int deviceId = -1);
+  virtual ~CudaDepthPacketProcessor();
+  virtual void setConfiguration(const libfreenect2::DepthPacketProcessor::Config &config);
+
+  virtual void loadP0TablesFromCommandResponse(unsigned char* buffer, size_t buffer_length);
+
+  virtual void loadXZTables(const float *xtable, const float *ztable);
+  virtual void loadLookupTable(const short *lut);
+
+  virtual bool good();
+  virtual const char *name() { return "CUDA"; }
+
+  virtual void process(const DepthPacket &packet);
+protected:
+  virtual Allocator *getAllocator();
+private:
+  CudaDepthPacketProcessorImpl *impl_;
+};
+#endif // LIBFREENECT2_WITH_CUDA_SUPPORT
+
+class DumpDepthPacketProcessor : public DepthPacketProcessor
+{
+ public:
+  DumpDepthPacketProcessor();
+  virtual ~DumpDepthPacketProcessor();
+
+  virtual void process(const DepthPacket &packet);
+
+  virtual void loadP0TablesFromCommandResponse(unsigned char* buffer, size_t buffer_length);
+  virtual void loadXZTables(const float *xtable, const float *ztable);
+  virtual void loadLookupTable(const short *lut);
+
+  const unsigned char* getP0Tables();
+
+  const float* getXTable();
+  const float* getZTable();
+
+  const short* getLookupTable();
+
+ protected:
+  unsigned char* p0table_;
+
+  float* xtable_;
+  float* ztable_;
+  
+  short* lut_;
+};
+
 } /* namespace libfreenect2 */
 #endif /* DEPTH_PACKET_PROCESSOR_H_ */
