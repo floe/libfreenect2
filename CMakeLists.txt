@@ -92,6 +92,7 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 # dependencies
 FIND_PACKAGE(PkgConfig)    # try find PKGConfig as it will be used if found
 FIND_PACKAGE(LibUSB REQUIRED)
+pkg_check_modules(OCV REQUIRED opencv)
 pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.4
                                gstreamer-video-1.0>=1.4
                                gstreamer-app-1.0>=1.4)
@@ -103,8 +104,8 @@ INCLUDE_DIRECTORIES(
   ${PROJECT_BINARY_DIR} # for generated headers
   ${LIBFREENECT2_THREADING_INCLUDE_DIR}
   ${LibUSB_INCLUDE_DIRS}
-  ${TurboJPEG_INCLUDE_DIRS}
   ${GST_INCLUDE_DIRS}
+  ${OCV_INCLUDE_DIRS}
 )
 
 SET(RESOURCES_INC_FILE "${PROJECT_BINARY_DIR}/resources.inc.h")
@@ -161,9 +162,9 @@ SET(SOURCES
 
 SET(LIBRARIES
   ${LibUSB_LIBRARIES}
-  ${TurboJPEG_LIBRARIES}
   ${LIBFREENECT2_THREADING_LIBRARIES}
   ${GST_LIBRARIES}
+  ${OCV_LIBRARIES}
 )
 
 SET(LIBFREENECT2_DLLS
