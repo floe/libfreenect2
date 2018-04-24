@@ -41,33 +41,7 @@
 #include "viewer.h"
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// plane model stuff
-//
-
-#include <Eigen/Core>
-#include <SimpleRansac.h>
-#include <PlaneModel.h>
-
-PlaneModel<float> plane;
-
 #include "gstreamer.cpp"
-
-void buffer_destroy(gpointer data) {
-  libfreenect2::Frame* done = (libfreenect2::Frame*)data;
-  delete done;
-}
-
-GstFlowReturn prepare_buffer(GstAppSrc* appsrc, libfreenect2::Frame* frame) {
-
-  guint size = 1280 * 720 * 4;
-  GstBuffer *buffer = gst_buffer_new_wrapped_full( (GstMemoryFlags)0, (gpointer)(frame->data), size, 0, size, frame, buffer_destroy );
-
-  return gst_app_src_push_buffer(appsrc, buffer);
-}
-
-// Protonect stuff
 
 bool protonect_shutdown = false; ///< Whether the running application should shut down.
 
