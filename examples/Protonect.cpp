@@ -41,7 +41,8 @@
 #include "viewer.h"
 #endif
 
-#include "gstreamer.cpp"
+#include "../../common.cpp"
+#include "../../kinect.cpp"
 
 bool protonect_shutdown = false; ///< Whether the running application should shut down.
 
@@ -433,7 +434,7 @@ int main(int argc, char *argv[])
     Mat output(720,1280,CV_8UC4,newrgb->data);
     warpPerspective(input,output,pm,output.size(),INTER_NEAREST);
 
-    prepare_buffer((GstAppSrc*)appsrc,newrgb);
+    prepare_buffer(1280*720*4,newrgb->data,newrgb,buffer_destroy);
     g_main_context_iteration(g_main_context_default(),FALSE);
 
 /// [gstreamer]
@@ -480,9 +481,7 @@ int main(int argc, char *argv[])
 
   delete registration;
 
-  /* clean up */
-  gst_element_set_state (gpipeline, GST_STATE_NULL);
-  gst_object_unref (GST_OBJECT (gpipeline));
+  gstreamer_cleanup();
 
   return 0;
 }

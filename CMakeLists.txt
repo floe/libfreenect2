@@ -107,6 +107,7 @@ INCLUDE_DIRECTORIES(
   ${GST_INCLUDE_DIRS}
   ${OCV_INCLUDE_DIRS}
   "/usr/include/eigen3/"
+  "${MY_DIR}/../include"
 )
 
 SET(RESOURCES_INC_FILE "${PROJECT_BINARY_DIR}/resources.inc.h")
