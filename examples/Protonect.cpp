@@ -428,13 +428,11 @@ int main(int argc, char *argv[])
       }
     }
 
-    libfreenect2::Frame *newrgb = new libfreenect2::Frame(1280, 720, 4);
-
     Mat input(1080,1920,CV_8UC4,rgb->data);
-    Mat output(720,1280,CV_8UC4,newrgb->data);
-    warpPerspective(input,output,pm,output.size(),INTER_NEAREST);
+    Mat* output = new Mat(720,1280,CV_8UC4);
+    warpPerspective(input,*output,pm,output->size(),INTER_NEAREST);
 
-    prepare_buffer(1280*720*4,newrgb->data,newrgb,buffer_destroy);
+    prepare_buffer(1280*720*4,output->data,output);
     g_main_context_iteration(g_main_context_default(),FALSE);
 
 /// [gstreamer]
