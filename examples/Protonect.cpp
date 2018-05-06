@@ -429,11 +429,7 @@ int main(int argc, char *argv[])
     }
 
     Mat input(1080,1920,CV_8UC4,rgb->data);
-    Mat* output = new Mat(720,1280,CV_8UC4);
-    warpPerspective(input,*output,pm,output->size(),INTER_NEAREST);
-
-    prepare_buffer(1280*720*4,output->data,output);
-    g_main_context_iteration(g_main_context_default(),FALSE);
+    prepare_buffer(&input,1280,720,CV_8UC4);
 
 /// [gstreamer]
 
