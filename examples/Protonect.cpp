@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
   dev->setIrAndDepthFrameListener(&listener);
 /// [listeners]
 
-  opencv_init();
+  opencv_init(512,424,1920,1080);
   gstreamer_init(argc,argv,"BGRx");
   quit = &protonect_shutdown;
 
@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 
     // use RANSAC to compute a plane out of sparse point cloud
     if (find_plane) {
-      plane = ransac_plane( registration, &undistorted, distance );
+      plane = ransac_plane( get_3d_point );
       find_plane = false;
     }
 
